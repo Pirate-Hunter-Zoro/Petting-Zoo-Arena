@@ -53,6 +53,10 @@ class RolloutBuffer:
             self.advantages  # Precomputed advantages
         )
 
+    def __len__(self):
+        # Return the number of stored timesteps
+        return len(self.states)
+
     def clear(self):
         # Reset buffer (like purging all cursed energy—clean slate)
         self.__init__()
