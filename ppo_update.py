@@ -16,9 +16,9 @@ def ppo_update(policy, optimizer_critic, optimizer_actor, buffer, critic_epochs=
         for start in range(0, states.size(0), mini_batch_size):
             end = start + mini_batch_size
             mb_idx = indices[start:end]
-
-            # First forward pass (for critic)
-            values = policy.critic(policy.shared(states[mb_idx])).squeeze()
+            # Value calculation for state
+            features = policy.feature_extractor(states[mb_idx].squeeze(1))
+            values = policy.critic(features).squeeze()
 
             # Critic loss
             value_loss = ((returns[mb_idx] - values) ** 2).mean()
@@ -26,7 +26,7 @@ def ppo_update(policy, optimizer_critic, optimizer_actor, buffer, critic_epochs=
             for _ in range(critic_epochs):
                 optimizer_critic.zero_grad()
                 # Run the model forward again to get the shared features with the computation graph
-                shared_features = policy.shared(states[mb_idx])
+                shared_features = policy.feature_extractor(states[mb_idx])
                 values = policy.critic(shared_features).squeeze()
                 value_loss = ((returns[mb_idx] - values) ** 2).mean()
 
@@ -34,7 +34,7 @@ def ppo_update(policy, optimizer_critic, optimizer_actor, buffer, critic_epochs=
                 optimizer_critic.step()
 
             # NEW forward pass (for actor) - otherwise the computation graph is broken
-            shared_features = policy.shared(states[mb_idx])
+            shared_features = policy.feature_extractor(states[mb_idx])
             logits = policy.actor(shared_features)
 
             dist = torch.distributions.Categorical(logits=logits)

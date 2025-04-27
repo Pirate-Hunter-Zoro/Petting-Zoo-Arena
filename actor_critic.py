@@ -8,7 +8,7 @@ class ActorCritic(nn.Module):
 
         # CNN feature extractor
         self.feature_extractor = nn.Sequential(
-            nn.Conv2d(obs_shape[0], 32, 3, stride=2, padding=1),
+            nn.Conv2d(obs_shape[2], 32, 3, stride=2, padding=1),  # <-- FIXED
             nn.ReLU(),
             nn.Conv2d(32, 64, 3, stride=2, padding=1),
             nn.ReLU(),
@@ -19,7 +19,7 @@ class ActorCritic(nn.Module):
 
         # Calculate flatten size dynamically
         with torch.no_grad():
-            dummy_input = torch.zeros(1, *obs_shape)
+            dummy_input = torch.zeros(1, obs_shape[2], obs_shape[0], obs_shape[1])
             n_flatten = self.feature_extractor(dummy_input).shape[1]
 
         self.actor = nn.Sequential(

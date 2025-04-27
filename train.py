@@ -9,25 +9,28 @@ from collections import deque
 import math
 import matplotlib.pyplot as plt
 import os
-from supersuit import frame_stack_v1
+
+from magent2.environments import battle_v4
 
 env = battle_v4.parallel_env()
-env = frame_stack_v1(env, 4)  # Stack 4 frames
+observations = env.reset()
+
+agent = env.agents[0]
+obs_shape = env.observation_space(agent).shape
+act_dim = env.action_space(agent).n
+
+policy = ActorCritic(obs_shape, act_dim)
 
 # For when we save models
 save_dir = "checkpoints"
 os.makedirs(save_dir, exist_ok=True)  # Create the directory if it doesn't exist
 
-# Setup
-obs_shape = env.observation_space(env.agents[0]).shape
-obs_dim = np.prod(obs_shape)  # <-- flatten properly
-act_dim = env.action_space(env.agents[0]).n
-policy = ActorCritic(obs_dim, act_dim)
+policy = ActorCritic(obs_shape, act_dim)
 buffer = RolloutBuffer()
 
 # We are going to be updating the actor and critic separately, so we need to split the parameters
-actor_params = list(policy.actor.parameters()) + list(policy.shared.parameters())
-critic_params = list(policy.critic.parameters()) + list(policy.shared.parameters())
+actor_params = list(policy.actor.parameters()) + list(policy.feature_extractor.parameters())
+critic_params = list(policy.critic.parameters()) + list(policy.feature_extractor.parameters())
 
 optimizer_actor = optim.Adam(actor_params, lr=1e-4) # Smaller RL for actor
 optimizer_critic = optim.Adam(critic_params, lr=3e-4) # Bigger RL for critic
@@ -84,8 +87,8 @@ for episode in range(total_episodes):
         for agent, obs in observations.items():
             if terminated[agent]:
                 continue
-            obs_tensor = torch.tensor(obs, dtype=torch.float32).unsqueeze(0)
-            action_val, log_prob, value = policy.get_action(obs_tensor)
+            obs_tensor = torch.tensor(obs, dtype=torch.float32).permute(2, 0, 1)
+            action_val, log_prob, value = policy.get_action(obs_tensor.unsqueeze(0))
             actions[agent] = action_val
             log_probs[agent] = log_prob
             values[agent] = value
@@ -108,7 +111,7 @@ for episode in range(total_episodes):
             
             # Store transition into buffer
             if agent in observations:
-                obs_tensor = torch.tensor(obs, dtype=torch.float32).unsqueeze(0)
+                obs_tensor = torch.tensor(obs, dtype=torch.float32).permute(2, 0, 1)
                 buffer.store(obs_tensor, actions[agent], log_probs[agent], reward, done, values[agent])
             
             episode_reward_total += reward
