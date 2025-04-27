@@ -22,6 +22,8 @@ pygame==2.1.0
 pyparsing==3.2.3
 python-dateutil==2.9.0.post0
 six==1.17.0
+SuperSuit==3.10.0
 sympy==1.13.3
+tinyscaler==1.2.8
 torch==2.7.0
 typing_extensions==4.13.2

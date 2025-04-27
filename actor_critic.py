@@ -1,24 +1,55 @@
 import torch
 import torch.nn as nn
+import torch.nn.functional as F
 
 class ActorCritic(nn.Module):
-    def __init__(self, state_dim, action_dim):
+    def __init__(self, obs_shape, action_dim):
         super().__init__()
-        self.shared = nn.Sequential(
-            nn.Linear(state_dim, 256),
+
+        # CNN feature extractor
+        self.feature_extractor = nn.Sequential(
+            nn.Conv2d(obs_shape[0], 32, 3, stride=2, padding=1),
             nn.ReLU(),
-            nn.Linear(256, 256),
-            nn.ReLU()
+            nn.Conv2d(32, 64, 3, stride=2, padding=1),
+            nn.ReLU(),
+            nn.Conv2d(64, 64, 3, stride=2, padding=1),
+            nn.ReLU(),
+            nn.Flatten()
         )
-        self.actor = nn.Linear(256, action_dim) # Action logits - the probability of each action given the state
-        self.critic = nn.Linear(256, 1) # Value output - the actual estimated value of the state
 
-    def forward(self, x):
-        shared = self.shared(x)
-        return self.actor(shared), self.critic(shared)
+        # Calculate flatten size dynamically
+        with torch.no_grad():
+            dummy_input = torch.zeros(1, *obs_shape)
+            n_flatten = self.feature_extractor(dummy_input).shape[1]
 
-    def get_action(self, state):
-        logits, value = self.forward(state)
+        self.actor = nn.Sequential(
+            nn.Linear(n_flatten, 256),
+            nn.ReLU(),
+            nn.Linear(256, action_dim)
+        )
+
+        self.critic = nn.Sequential(
+            nn.Linear(n_flatten, 256),
+            nn.ReLU(),
+            nn.Linear(256, 1)
+        )
+
+    def forward(self):
+        raise NotImplementedError
+
+    def get_action(self, obs):
+        features = self.feature_extractor(obs)
+        logits = self.actor(features)
         dist = torch.distributions.Categorical(logits=logits)
         action = dist.sample()
-        return action.item(), dist.log_prob(action), value
+        return action, dist.log_prob(action), dist.entropy()
+
+    def evaluate(self, obs, action):
+        features = self.feature_extractor(obs)
+        logits = self.actor(features)
+        dist = torch.distributions.Categorical(logits=logits)
+
+        log_prob = dist.log_prob(action)
+        entropy = dist.entropy()
+        value = self.critic(features).squeeze(-1)
+        return log_prob, entropy, value

@@ -8,6 +8,8 @@ def ppo_update(policy, optimizer_critic, optimizer_actor, buffer, critic_epochs=
     log_probs_old = log_probs_old.detach()
     returns = returns.detach()
     advantages = advantages.detach()
+    # Normalize advantages
+    advantages = (advantages - advantages.mean()) / (advantages.std() + 1e-8)
 
     for _ in range(epochs):
         indices = torch.randperm(states.size(0))

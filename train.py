@@ -9,8 +9,10 @@ from collections import deque
 import math
 import matplotlib.pyplot as plt
 import os
+from supersuit import frame_stack_v1
 
 env = battle_v4.parallel_env()
+env = frame_stack_v1(env, 4)  # Stack 4 frames
 
 # For when we save models
 save_dir = "checkpoints"
@@ -56,11 +58,11 @@ Loop:
     Then call PPO update after collecting enough data.
 """
 batch_size = 2048  # How many total steps before we train
-mini_batch_size = 64  # For PPO updates
+mini_batch_size = 128  # For PPO updates
 ppo_epochs = 10  # How many times we update per batch
 
 initial_ent_coef = 0.02
-final_ent_coef = 0.0001
+final_ent_coef = 0.001
 decay_episodes = 500  # Number of episodes over which to decay
 
 for episode in range(total_episodes):
@@ -82,7 +84,7 @@ for episode in range(total_episodes):
         for agent, obs in observations.items():
             if terminated[agent]:
                 continue
-            obs_tensor = torch.tensor(obs, dtype=torch.float32).flatten().unsqueeze(0)
+            obs_tensor = torch.tensor(obs, dtype=torch.float32).unsqueeze(0)
             action_val, log_prob, value = policy.get_action(obs_tensor)
             actions[agent] = action_val
             log_probs[agent] = log_prob
@@ -97,7 +99,7 @@ for episode in range(total_episodes):
             # Survival reward (small bonus if alive)
             if not done:
                 reward += 0.01
-
+        
             # HACKY battle reward shaping based only on reward size
             if rewards[agent] >= 1.0:
                 reward += 3.0  # Big reward (likely a kill or huge damage)
@@ -106,7 +108,7 @@ for episode in range(total_episodes):
             
             # Store transition into buffer
             if agent in observations:
-                obs_tensor = torch.tensor(observations[agent], dtype=torch.float32).flatten()
+                obs_tensor = torch.tensor(obs, dtype=torch.float32).unsqueeze(0)
                 buffer.store(obs_tensor, actions[agent], log_probs[agent], reward, done, values[agent])
             
             episode_reward_total += reward
