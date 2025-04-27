@@ -31,7 +31,7 @@ optimizer_actor = optim.Adam(actor_params, lr=1e-4) # Smaller RL for actor
 optimizer_critic = optim.Adam(critic_params, lr=3e-4) # Bigger RL for critic
 
 
-total_episodes = 500
+total_episodes = 5000
 
 reward_history = []
 episode_lengths = []
@@ -57,11 +57,9 @@ Loop:
 """
 batch_size = 2048  # How many total steps before we train
 mini_batch_size = 64  # For PPO updates
-ppo_epochs = 4  # How many times we update per batch
+ppo_epochs = 10  # How many times we update per batch
 
-total_episodes = 5000
-
-initial_ent_coef = 0.01
+initial_ent_coef = 0.02
 final_ent_coef = 0.0001
 decay_episodes = 500  # Number of episodes over which to decay
 
@@ -95,13 +93,23 @@ for episode in range(total_episodes):
         for agent in env.agents:
             done = terminations[agent] or truncations[agent]
             reward = rewards[agent]
-            # NEW: Give tiny living reward
+            
+            # Survival reward (small bonus if alive)
             if not done:
-                reward += 0.01  # Surviving gives small reward
+                reward += 0.01
+
+            # HACKY battle reward shaping based only on reward size
+            if rewards[agent] >= 1.0:
+                reward += 3.0  # Big reward (likely a kill or huge damage)
+            elif rewards[agent] >= 0.5:
+                reward += 1.0  # Moderate reward (likely a hit or assist)
+            
+            # Store transition into buffer
             if agent in observations:
                 obs_tensor = torch.tensor(observations[agent], dtype=torch.float32).flatten()
                 buffer.store(obs_tensor, actions[agent], log_probs[agent], reward, done, values[agent])
-            episode_reward_total += reward  # Track manually
+            
+            episode_reward_total += reward
             episode_step_count += 1
 
         observations = next_obs

@@ -5,13 +5,13 @@ class ActorCritic(nn.Module):
     def __init__(self, state_dim, action_dim):
         super().__init__()
         self.shared = nn.Sequential(
-            nn.Linear(state_dim, 128),
-            nn.Tanh(),
-            nn.Linear(128, 128),
-            nn.Tanh()
+            nn.Linear(state_dim, 256),
+            nn.ReLU(),
+            nn.Linear(256, 256),
+            nn.ReLU()
         )
-        self.actor = nn.Linear(128, action_dim) # Action logits - the probability of each action given the state
-        self.critic = nn.Linear(128, 1) # Value output - the actual estimated value of the state
+        self.actor = nn.Linear(256, action_dim) # Action logits - the probability of each action given the state
+        self.critic = nn.Linear(256, 1) # Value output - the actual estimated value of the state
 
     def forward(self, x):
         shared = self.shared(x)
