@@ -30,6 +30,9 @@ critic_params = list(policy.critic.parameters()) + list(policy.feature_extractor
 
 optimizer_actor = optim.Adam(actor_params, lr=1e-4)
 optimizer_critic = optim.Adam(critic_params, lr=3e-4)
+# For learning rate decay
+scheduler_actor = torch.optim.lr_scheduler.StepLR(optimizer_actor, step_size=5000, gamma=0.95)
+scheduler_critic = torch.optim.lr_scheduler.StepLR(optimizer_critic, step_size=5000, gamma=0.95)
 
 total_episodes = 5000
 
@@ -39,10 +42,11 @@ smoothed_rewards = []
 smoothed_lengths = []
 
 batch_size = 8192
-mini_batch_size = 128
+mini_batch_size = 256
 ppo_epochs = 10
+critic_epochs = 5
 
-initial_ent_coef = 0.02
+initial_ent_coef = 0.04
 final_ent_coef = 0.001
 decay_episodes = 2000
 
@@ -110,7 +114,10 @@ for episode in range(total_episodes):
             break
 
     buffer.compute_returns_and_advantages()
-    ppo_update(policy, optimizer_actor, optimizer_critic, buffer, ent_coef=ent_coef, critic_epochs=2, mini_batch_size=64, epochs=4)
+    ppo_update(policy, optimizer_actor, optimizer_critic, buffer, ent_coef=ent_coef, critic_epochs=critic_epochs, mini_batch_size=mini_batch_size, epochs=ppo_epochs)
+    # Learning rates
+    scheduler_actor.step()
+    scheduler_critic.step()
 
     reward_history.append(episode_reward_total)
     episode_lengths.append(episode_step_count)

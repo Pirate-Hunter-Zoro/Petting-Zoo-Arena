@@ -27,15 +27,15 @@ class ActorCritic(nn.Module):
             n_flatten = self.feature_extractor(dummy_input).shape[1]
 
         self.actor = nn.Sequential(
-            nn.Linear(n_flatten, 256),
+            nn.Linear(n_flatten, 512),
             nn.ReLU(),
-            nn.Linear(256, action_dim)
+            nn.Linear(512, action_dim)
         )
 
         self.critic = nn.Sequential(
-            nn.Linear(n_flatten, 256),
+            nn.Linear(n_flatten, 512),
             nn.ReLU(),
-            nn.Linear(256, 1)
+            nn.Linear(512, 1)
         )
 
     def forward(self):
