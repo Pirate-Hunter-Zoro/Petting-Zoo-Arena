@@ -117,11 +117,12 @@ for episode in range(total_episodes):
     smoothed_rewards.append(np.mean(reward_history[-10:]))
     smoothed_lengths.append(np.mean(episode_lengths[-10:]))
 
+    print(f"[Episode {episode}] Total Reward: {episode_reward_total:.2f}, Episode Length: {episode_step_count}, Entropy Coefficient: {ent_coef:.4f}")
+
     if episode % 200 == 0:
-        print(f"[Episode {episode}] Avg Reward (last 10): {np.mean(smoothed_rewards[-10:]):.2f}, Avg Length: {np.mean(smoothed_lengths[-10:]):.2f}")
         env.render()
 
-    if (episode + 1) % 500 == 0:
+    if (episode + 1) % 50 == 0:
         save_path = os.path.join(save_dir, f"policy_checkpoint_episode_{episode+1}.pth")
         torch.save(policy.state_dict(), save_path)
         print(f"Saved checkpoint: {save_path}")
