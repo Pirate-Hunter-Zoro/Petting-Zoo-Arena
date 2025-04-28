@@ -6,14 +6,18 @@ class ActorCritic(nn.Module):
     def __init__(self, obs_shape, action_dim):
         super().__init__()
 
-        # CNN feature extractor
         self.feature_extractor = nn.Sequential(
-            nn.Conv2d(obs_shape[2], 32, 3, stride=2, padding=1),  # <-- FIXED
+            nn.Conv2d(obs_shape[2], 32, 3, stride=2, padding=1),
             nn.ReLU(),
             nn.Conv2d(32, 64, 3, stride=2, padding=1),
             nn.ReLU(),
-            nn.Conv2d(64, 64, 3, stride=2, padding=1),
+            nn.Conv2d(64, 128, 3, stride=2, padding=1),
+            nn.GroupNorm(8, 128),  # GroupNorm after deeper layer
             nn.ReLU(),
+            nn.Conv2d(128, 128, 3, stride=1, padding=1),
+            nn.ReLU(),
+            nn.Dropout(0.1),        # New Dropout to prevent overfitting
+            nn.AdaptiveAvgPool2d((1,1)),  # Pool down to (1,1) regardless of input size
             nn.Flatten()
         )
 
@@ -37,12 +41,12 @@ class ActorCritic(nn.Module):
     def forward(self):
         raise NotImplementedError
 
-    def get_action(self, obs):
-        features = self.feature_extractor(obs)
+    def get_action(self, obs_batch):
+        features = self.feature_extractor(obs_batch)
         logits = self.actor(features)
         dist = torch.distributions.Categorical(logits=logits)
-        action = dist.sample()
-        return action, dist.log_prob(action), dist.entropy()
+        actions = dist.sample()
+        return actions, dist.log_prob(actions), dist.entropy()
 
     def evaluate(self, obs, action):
         features = self.feature_extractor(obs)

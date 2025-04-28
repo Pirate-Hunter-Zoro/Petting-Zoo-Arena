@@ -41,10 +41,12 @@ def ppo_update(policy, optimizer_critic, optimizer_actor, buffer, critic_epochs=
             new_log_probs = dist.log_prob(actions[mb_idx])
             entropy = dist.entropy().mean()
 
-            ratios = torch.exp(new_log_probs - log_probs_old[mb_idx])
-            surr1 = ratios * advantages[mb_idx]
-            surr2 = torch.clamp(ratios, 1 - clip_eps, 1 + clip_eps) * advantages[mb_idx]
-            actor_loss = -torch.min(surr1, surr2).mean()
+            # Compute actor loss
+            ratios = torch.exp(new_log_probs - log_probs_old[mb_idx]) # How much more likely each action became after policy update
+            surr1 = ratios * advantages[mb_idx] # How much better the each action was compared to expected baseline WEIGHTED by the likelihood ratio
+            surr2 = torch.clamp(ratios, 1 - clip_eps, 1 + clip_eps) * advantages[mb_idx] # E.g. if clip_eps = 0.2, then this is the range [0.8, 1.2] of the ratio, and update can cause a probability change of more than 20%
+            # Maximizing the surrogate reward is equivalent to minimizing the negative surrogate reward
+            actor_loss = -torch.min(surr1, surr2).mean() # If sometimes surr1 will be greater than surr2 or vice versa, then we will use the smaller one to avoid large policy updates
 
             optimizer_actor.zero_grad()
             loss = actor_loss - ent_coef * entropy
