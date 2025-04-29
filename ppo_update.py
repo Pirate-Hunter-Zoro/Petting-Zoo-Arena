@@ -50,5 +50,8 @@ def ppo_update(policy, optimizer_critic, optimizer_actor, buffer, critic_epochs=
 
             optimizer_actor.zero_grad()
             loss = actor_loss - ent_coef * entropy
+            # Add a soft KL penalty to avoid big policy shifts.
+            kl_div = torch.distributions.kl_divergence(dist, torch.distributions.Categorical(logits=logits.detach())).mean()
+            loss += 0.01 * kl_div
             loss.backward()
             optimizer_actor.step()

@@ -34,8 +34,10 @@ for ep in range(num_episodes):
         actions = {}
         for agent in env.agents:
             if not terminated[agent]:
-                obs = torch.tensor(observations[agent], dtype=torch.float32).permute(2, 0, 1).unsqueeze(0).to(device)  
-                action, _, _ = policy.get_action(obs)
+                obs_tensor = torch.tensor(observations / 255.0, dtype=torch.float32).permute(2, 0, 1).to(device)
+                obs_tensor = torch.clamp(obs_tensor, 0.0, 1.0)
+                obs_tensor = torch.clamp(obs_tensor, 0.0, 1.0) 
+                action, _, _ = policy.get_action(obs_tensor)
                 actions[agent] = action.item()
 
         observations, rewards, terminations, truncations, infos = env.step(actions)
