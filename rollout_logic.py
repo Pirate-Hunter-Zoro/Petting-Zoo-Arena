@@ -13,7 +13,7 @@ def collect_experience(env, policy, frozen_policy, use_frozen, buffer, device,
     values = {}
     log_probs = {}
 
-    while len(buffer) < batch_size: # Note that this function does NOTHING if the buffer is full
+    while len(buffer) < batch_size:
         # Only choose new actions every 'action_repeat' steps
         if steps_since_action % action_repeat == 0:
             actions = {}
