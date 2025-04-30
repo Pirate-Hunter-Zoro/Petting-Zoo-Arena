@@ -58,6 +58,9 @@ smoothed_rewards, smoothed_lengths = [], []
 # === Preload Frozen Policies (if any exist) ===
 frozen_policies = [file for file in os.listdir(save_dir) if file.startswith("frozen_policy")]
 
+# Keep track of best reward
+best_reward = -np.inf
+
 # === Main Training Loop ===
 for episode in range(total_episodes):
     # Entropy coefficient decay schedule
@@ -97,8 +100,9 @@ for episode in range(total_episodes):
     print(f"[Episode {episode}] Total Reward: {total_reward:.2f}, Length: {ep_len}, Entropy Coef: {ent_coef:.4f}")
 
     # Save current model
-    if (episode + 1) % SAVE_POINT == 0:
-        save_checkpoint(policy, save_dir, f"policy_checkpoint_episode_{episode+1}.pth")
+    if total_reward > best_reward:
+        save_checkpoint(policy, save_dir, f"best_model.pth")
+        best_reward = total_reward
     if (episode + 1) % FROZEN_POLICY_POINT == 0:
         save_checkpoint(policy, save_dir, f"frozen_policy_episode_{episode+1}.pth")
         frozen_policies = [file for file in os.listdir(save_dir) if file.startswith("frozen_policy")]
